@@ -1,36 +1,16 @@
 import random
 import pyjokes
-from art import tprint, text2art
+from art import text2art
 import emoji
 from prettytable import PrettyTable
 from colorama import init, Fore, Back, Style
 from tqdm import tqdm
-
-
+import time
+import json
+from data import films, stories, music, games
 
 init(autoreset=True)
-
-films = [Fore.BLACK + "Avatar", Fore.BLACK + "Great Gatsby", Fore.BLACK + "Oppenheimer", Fore.BLACK + "Titanic",
-         Fore.BLACK + "Brain Games"]
-music = [Fore.BLACK + "Dance", Fore.BLACK + "Flowers", Fore.BLACK + "Cold Heart", Fore.BLACK + "We will rock you",
-         Fore.BLACK + "Halo"]
-games = [Fore.BLACK + "Battlefield", Fore.BLACK + "Dota2", Fore.BLACK + "Lineage2", Fore.BLACK + "CS.GO",
-         Fore.BLACK + "Last of us"]
-jokes = [Fore.BLACK + "Why are snails slow? Because they’re carrying a house on their back.",
-         Fore.BLACK + "What’s the smartest insect? A spelling bee!",
-         Fore.BLACK + "How does the ocean say hi? It waves!",
-         Fore.BLACK + "What do birds give out on Halloween? Tweets.",
-         Fore.BLACK + "What is a room with no walls? A mushroom."]
-stories = [Fore.BLACK + "The Rainbow Fish: This short story tells that\nthe rainbow fish wants to know who he is by "
-                        "pointing to the \nindividual identity and the morality of life.",
-           Fore.BLACK + "The Very Hungry Caterpillar:This story about a caterpillar journey \nas the hungry caterpillar"
-                        "transforms into a beautiful butterfly.",
-           Fore.BLACK + "The Little Red Hen:This story tells the importance of being hardworking,\ncooperative and "
-                        "helping others in this classical children tale.",
-           Fore.BLACK + "The Ugly Duckling: This story is a popular children tale about acceptance \nof someone’s "
-                        "appearance and finding one’s true identity.",
-           Fore.BLACK + "Cinderella: The classic fairytale of Cinderella about kindness, love magic, \nand a happily "
-                        "ever after."]
+STATS_FILE = "game_stats.json"
 
 
 def recommend_films():
@@ -50,8 +30,7 @@ def recommend_games():
 
 def tell_joke():
     """Function to tell joke"""
-    return random.choice(jokes)
-    #return pyjokes.get_joke()
+    return pyjokes.get_joke()
 
 
 def tell_story():
@@ -59,20 +38,48 @@ def tell_story():
     return random.choice(stories)
 
 
+def load_stats():
+    """Load game statistics from file"""
+    try:
+        with open(STATS_FILE, "r") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return {"wins": 0, "losses": 0, "draws": 0}
+
+
+def save_stats(stats):
+    """Save game statistics to file"""
+    with open(STATS_FILE, "w") as file:
+        json.dump(stats, file)
+
+
 def play_game():
     """Function to play game"""
+    stats = load_stats()
     choices = ["Stone", "Scissors", "Paper"]
-    user_choice = input(Style.BRIGHT + Fore.BLACK + "Make a choice (Stone, Scissors, Paper): ")
-    computer_choice = random.choice(choices)
-    print(Fore.LIGHTBLACK_EX + f"Computer chose: {computer_choice}")
-    if user_choice == computer_choice:
-        return Fore.LIGHTWHITE_EX + "Draw! "
-    elif (user_choice == "Stone" and computer_choice == "Scissors") or \
-            (user_choice == "Scissors" and computer_choice == "Paper") or \
-            (user_choice == "Paper" and computer_choice == "Stone"):
-        return Fore.LIGHTWHITE_EX + "Congrats! You won!\U0001F973"
-    else:
-        return Fore.LIGHTWHITE_EX + "Sorry! You lose!\U0001F614"
+
+    while True:
+        user_choice = input(Style.BRIGHT + Fore.BLACK + "Make a choice (Stone, Scissors, Paper): ")
+        computer_choice = random.choice(choices)
+        print(Fore.LIGHTBLACK_EX + f"Computer chose: {computer_choice}")
+
+        if user_choice == computer_choice:
+            stats["draws"] += 1
+            print(Fore.LIGHTWHITE_EX + "Draw!")
+        elif (user_choice == "Stone" and computer_choice == "Scissors") or \
+                (user_choice == "Scissors" and computer_choice == "Paper") or \
+                (user_choice == "Paper" and computer_choice == "Stone"):
+            stats["wins"] += 1
+            print(Fore.LIGHTWHITE_EX + "Congrats! You won!\U0001F973")
+        else:
+            stats["losses"] += 1
+            print(Fore.LIGHTWHITE_EX + "Sorry! You lose!\U0001F614")
+
+        save_stats(stats)
+
+        play_again = input(Fore.LIGHTWHITE_EX + "Do you want to play again? (yes/no): ").strip().lower()
+        if play_again != 'yes':
+            break
 
 
 def show_recommendations():
@@ -85,9 +92,18 @@ def show_recommendations():
     print(table)
 
 
+def show_stats():
+    """Function to show game statistics"""
+    stats = load_stats()
+    print(Fore.LIGHTWHITE_EX + Style.BRIGHT + "\nGame Statistics:")
+    print(Fore.LIGHTBLACK_EX + f"Wins: {stats['wins']}")
+    print(Fore.LIGHTBLACK_EX + f"Losses: {stats['losses']}")
+    print(Fore.LIGHTBLACK_EX + f"Draws: {stats['draws']}")
+
+
 def main():
     """Main code. Interface. Work with user."""
-    #tprint("Entertainment Bot", font="small")
+    # tprint("Entertainment Bot", font="small")
     print(text2art("EntBot", font="medium"))
     print(emoji.emojize(Style.BRIGHT + Fore.LIGHTWHITE_EX + "Hi! This is 'Entertainment bot'! \U0001F600"))
     while True:
@@ -99,7 +115,8 @@ def main():
         print(Fore.LIGHTBLACK_EX + "5. Random joke.")
         print(Fore.LIGHTBLACK_EX + "6. Short story.")
         print(Fore.LIGHTBLACK_EX + "7. Play game 'Stone, Scissors, Paper'.")
-        print(Fore.LIGHTBLACK_EX + "8. Exit.")
+        print(Fore.LIGHTBLACK_EX + "8. Show game statistics.")
+        print(Fore.LIGHTBLACK_EX + "9. Exit.")
 
         choice = input(Style.BRIGHT + Fore.LIGHTWHITE_EX + Back.LIGHTBLACK_EX + "Choose the option: ")
 
@@ -118,10 +135,12 @@ def main():
         elif choice == "7":
             print(play_game())
         elif choice == "8":
+            show_stats()
+        elif choice == "9":
             print(emoji.emojize(Fore.LIGHTWHITE_EX + "Goodbye! \U0001F44B"))
+            # Імітація тривалого процесу, 100 циклів
             for _ in tqdm(range(100), desc="Exiting", leave=False):
-                pass
-            break
+                time.sleep(0.1)
         else:
             print(Fore.RED + "Wrong choice. Try again!")
 
